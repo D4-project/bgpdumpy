@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 ########################################################################################################################
 # Copyright © 2015 Alex Forster. All rights reserved.
@@ -6,14 +6,14 @@
 # See the LICENSE file for details.
 ########################################################################################################################
 
-import os
-
 from pkg_resources import resource_filename
 from socket import inet_ntop, AF_INET, AF_INET6
 from datetime import datetime
 from cffi import FFI
 
 from CDefs import CTypes, CConst
+
+from pathlib import Path
 
 
 class BGPAttributes:
@@ -72,7 +72,8 @@ class BGPAttributes:
     @property
     def cluster(self):
 
-        if self._cluster is not None: return self._cluster
+        if self._cluster is not None:
+            return self._cluster
         self._cluster = []
         for i in range(0, self.attributes.cluster.length):
             self._cluster.append(
@@ -155,12 +156,12 @@ class TableDumpV1:
     @property
     def prefix(self):
 
-        if self.subtype == CConst.BGPDUMP_SUBTYPE_MRTD_TABLE_DUMP_AFI_IP \
-        or self.subtype == CConst.BGPDUMP_SUBTYPE_MRTD_TABLE_DUMP_AFI_IP_32BIT_AS:
+        if (self.subtype == CConst.BGPDUMP_SUBTYPE_MRTD_TABLE_DUMP_AFI_IP
+                or self.subtype == CConst.BGPDUMP_SUBTYPE_MRTD_TABLE_DUMP_AFI_IP_32BIT_AS):
             return inet_ntop(AF_INET, self.bgp.ffi.buffer(self.bgp.ffi.addressof(self.body.prefix.v4_addr))[:])
 
-        if self.subtype == CConst.BGPDUMP_SUBTYPE_MRTD_TABLE_DUMP_AFI_IP6 \
-        or self.subtype == CConst.BGPDUMP_SUBTYPE_MRTD_TABLE_DUMP_AFI_IP6_32BIT_AS:
+        if (self.subtype == CConst.BGPDUMP_SUBTYPE_MRTD_TABLE_DUMP_AFI_IP6
+                or self.subtype == CConst.BGPDUMP_SUBTYPE_MRTD_TABLE_DUMP_AFI_IP6_32BIT_AS):
             return inet_ntop(AF_INET6, self.bgp.ffi.buffer(self.bgp.ffi.addressof(self.body.prefix.v6_addr))[:])
 
     @property
@@ -181,12 +182,12 @@ class TableDumpV1:
     @property
     def peerIP(self):
 
-        if self.subtype == CConst.BGPDUMP_SUBTYPE_MRTD_TABLE_DUMP_AFI_IP \
-        or self.subtype == CConst.BGPDUMP_SUBTYPE_MRTD_TABLE_DUMP_AFI_IP_32BIT_AS:
+        if (self.subtype == CConst.BGPDUMP_SUBTYPE_MRTD_TABLE_DUMP_AFI_IP
+                or self.subtype == CConst.BGPDUMP_SUBTYPE_MRTD_TABLE_DUMP_AFI_IP_32BIT_AS):
             return inet_ntop(AF_INET, self.bgp.ffi.buffer(self.bgp.ffi.addressof(self.body.prefix.v4_addr))[:])
 
-        if self.subtype == CConst.BGPDUMP_SUBTYPE_MRTD_TABLE_DUMP_AFI_IP6 \
-        or self.subtype == CConst.BGPDUMP_SUBTYPE_MRTD_TABLE_DUMP_AFI_IP6_32BIT_AS:
+        if (self.subtype == CConst.BGPDUMP_SUBTYPE_MRTD_TABLE_DUMP_AFI_IP6
+                or self.subtype == CConst.BGPDUMP_SUBTYPE_MRTD_TABLE_DUMP_AFI_IP6_32BIT_AS):
             return inet_ntop(AF_INET6, self.bgp.ffi.buffer(self.bgp.ffi.addressof(self.body.prefix.v6_addr))[:])
 
     @property
@@ -254,7 +255,8 @@ class TableDumpV2RouteEntry:
     @property
     def attr(self):
 
-        if self._attr is not None: return self._attr
+        if self._attr is not None:
+            return self._attr
         self._attr = BGPAttributes(self.bgp, self.entry.attr) if self.entry.attr != self.bgp.ffi.NULL else None
         return self._attr
 
@@ -300,7 +302,8 @@ class TableDumpV2:
     @property
     def routeEntries(self):
 
-        if self._routeEntries is not None: return self._routeEntries
+        if self._routeEntries is not None:
+            return self._routeEntries
         self._routeEntries = []
         for i in range(0, self.body.entry_count):
             self._routeEntries.append(TableDumpV2RouteEntry(self.bgp, self.body.entries[i]))
@@ -329,14 +332,16 @@ class BGPEntry:
     @property
     def attr(self):
 
-        if self._attr is not None: return self._attr
+        if self._attr is not None:
+            return self._attr
         self._attr = BGPAttributes(self.bgp, self.entry.attr) if self.entry.attr != self.bgp.ffi.NULL else None
         return self._attr
 
     @property
     def body(self):
 
-        if self._body is not None: return self._body
+        if self._body is not None:
+            return self._body
 
         if self.entry.type == CConst.BGPDUMP_TYPE_MRTD_TABLE_DUMP:
             self._body = TableDumpV1(self.bgp, self.entry.subtype, self.entry.body.mrtd_table_dump)
@@ -351,9 +356,10 @@ class BGPEntry:
 
 class BGPDump:
 
-    def __init__(self, filename):
+    def __init__(self, filename: Path, libbgpdump_path: Path=None):
 
-        self.filename =  str(filename) if isinstance( filename, unicode ) else filename
+        self.libbgpdump_path = libbgpdump_path
+        self.filename = filename
         self.ffi = None
         self.libc = None
         self.libbgpdump = None
@@ -363,14 +369,17 @@ class BGPDump:
 
         self.ffi = FFI()
 
-        libdir = resource_filename( 'bgpdumpy', 'lib' ) or ''
+        if self.libbgpdump_path:
+            libpath = Path(self.libbgpdump_path)
+        else:
+            libpath = Path(resource_filename('bgpdumpy', 'lib') or '') / 'libbgpdump.so'
 
         self.libc = self.ffi.dlopen(None)
-        self.libbgpdump = self.ffi.dlopen( os.path.join( libdir, 'libbgpdump.so' ) )
+        self.libbgpdump = self.ffi.dlopen(str(libpath))
 
         self.ffi.cdef(CTypes)
 
-        self.handle = self.libbgpdump.bgpdump_open_dump(self.filename)
+        self.handle = self.libbgpdump.bgpdump_open_dump(str(self.filename).encode())
 
         return self
 
@@ -389,14 +398,20 @@ class BGPDump:
 
         while True:
 
-            if self.handle.eof == 1: break
+            if self.handle.eof == 1:
+                break
 
             currentEntry = self.libbgpdump.bgpdump_read_next(self.handle)
 
-            if currentEntry == self.ffi.NULL: continue  # sometimes we get NULL back for no apparent reason
+            if currentEntry == self.ffi.NULL:
+                continue  # sometimes we get NULL back for no apparent reason
 
-            try: yield BGPEntry(self, currentEntry)
-            finally: self.libbgpdump.bgpdump_free_mem(currentEntry)
+            try:
+                yield BGPEntry(self, currentEntry)
+            except Exception as e:
+                print(e)
+            finally:
+                self.libbgpdump.bgpdump_free_mem(currentEntry)
 
     @property
     def version(self):
