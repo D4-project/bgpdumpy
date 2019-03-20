@@ -10,10 +10,9 @@ from pkg_resources import resource_filename
 from socket import inet_ntop, AF_INET, AF_INET6
 from datetime import datetime
 from cffi import FFI
-
-from CDefs import CTypes, CConst
-
 from pathlib import Path
+
+from .CDefs import CTypes, CConst
 
 
 class BGPAttributes:
