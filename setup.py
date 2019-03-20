@@ -14,7 +14,8 @@ from setuptools.command.install_lib import install_lib as install_lib
 from subprocess import check_call
 
 PACKAGE_NAME = 'bgpdumpy'
-PACKAGE_VERSION = '1.0.1'
+PACKAGE_VERSION = '2.0'
+
 
 class custom_install_lib(install_lib):
 
@@ -22,13 +23,14 @@ class custom_install_lib(install_lib):
 
         install_lib.run(self)
 
-        cwd = os.path.join( os.getcwd(), self.install_dir )
-        cwd = os.path.join( cwd, PACKAGE_NAME )
+        cwd = os.path.join(os.getcwd(), self.install_dir)
+        cwd = os.path.join(cwd, PACKAGE_NAME)
 
-        print( 'Running mkdeps in ' + cwd )
+        print('Running mkdeps in ' + cwd)
 
-        check_call( [os.path.join( cwd, 'mkdeps' )], cwd=cwd )
-        check_call( [os.path.join( cwd, 'mkdeps' ), 'clean'], cwd=cwd )
+        check_call([os.path.join(cwd, 'mkdeps')], cwd=cwd)
+        check_call([os.path.join(cwd, 'mkdeps'), 'clean'], cwd=cwd)
+
 
 setup(
     name=PACKAGE_NAME,
@@ -43,14 +45,9 @@ setup(
     download_url='https://pypi.python.org/pypi/bgpdumpy',
     zip_safe=False,
     packages=[PACKAGE_NAME],
-    package_dir={PACKAGE_NAME: '.'},
-    package_data={PACKAGE_NAME: [
-        'mkdeps',
-        'deps/*.gz',
-        'README*',
-        'LICENSE',
-        'requirements.txt',
-    ]},
+    package_data={PACKAGE_NAME: ['README*',
+                                 'LICENSE',
+                                 'clib/libbgpdump.so']},
     install_requires=[
         'cffi',
     ],
@@ -69,4 +66,5 @@ setup(
     cmdclass={
         'install_lib': custom_install_lib,
     },
+    scripts=['bin/dump_routes.py'],
 )
