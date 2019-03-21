@@ -13,6 +13,9 @@ from .exceptions import LibraryNotFound
 
 def routeview(bview_file: Path, libbgpdump_path: Path=None):
 
+    def find_best_non_AS_set(originatingASs):
+        pass
+
     if not libbgpdump_path:
         libbgpdump_path = Path(sys.modules['bgpdumpy'].__file__).parent / 'clib' / 'libbgpdump.so'
         if not libbgpdump_path.exists():
@@ -33,9 +36,19 @@ def routeview(bview_file: Path, libbgpdump_path: Path=None):
             prefix = f'{entry.body.prefix}/{entry.body.prefixLength}'
 
             # get a list of each unique originating ASN for this prefix
-            originatingASs = ([re.split(rb'\s+', route.attr.asPath)[-1] for route in entry.body.routeEntries])
+            all_paths = []
+            for route in entry.body.routeEntries:
+                as_path = [asn.decode() for asn in re.split(rb'\s+', route.attr.asPath)]
+                all_paths.append(as_path)
 
-            best_as = originatingASs[-1].decode()
+            # Cleanup the AS Sets
+            for asn in reversed(all_paths[-1]):
+                if asn.isnumeric():
+                    best_as = asn
+                    break
+                elif asn[1:-1].isnumeric():
+                    best_as = asn[1:-1]
+                    break
 
             if entry.body.afi == AF_INET:
                 routes['v4'].append((prefix, best_as))
